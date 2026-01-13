@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>시화조력 스마트 관리 시스템</title>
+    <style>
+        body { background: #121212; color: white; font-family: 'Malgun Gothic', sans-serif; text-align: center; margin: 0; padding: 20px; }
+        .dashboard-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; max-width: 1000px; margin: 0 auto; }
+        .card { background: #1e1e1e; border: 1px solid #333; padding: 20px; border-radius: 12px; transition: 0.3s; }
+        .card:hover { border-color: #00e5ff; }
+        .label { font-size: 0.9em; color: #aaa; margin-bottom: 10px; }
+        .val { font-size: 2.2em; font-weight: bold; color: #00e5ff; }
+        .unit { font-size: 0.4em; color: #777; margin-left: 5px; }
+        
+        /* 낙차 강조 스타일 */
+        .highlight { background: #263238; border: 2px solid #00e5ff; }
+        .highlight .val { color: #ffff00; }
+        
+        /* 상태 바 */
+        .status-banner { grid-column: span 3; padding: 15px; border-radius: 8px; margin-top: 10px; font-weight: bold; font-size: 1.2em; }
+        .bg-normal { background: #004d40; color: #00e676; }
+        .bg-warn { background: #b71c1c; color: #ff5252; animation: pulse 1s infinite; }
+        
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body>
+    <h1>🌊 조력발전 실시간 수위 및 낙차 모니터링</h1>
+    
+    <div class="dashboard-grid">
+        <div class="card">
+            <div class="label">해수위 (Sea Level)</div>
+            <div id="sea-val" class="val">0.00<span class="unit">m</span></div>
+        </div>
+        <div class="card">
+            <div class="label">호수위 (Lake Level)</div>
+            <div id="lake-val" class="val">0.00<span class="unit">m</span></div>
+        </div>
+        <div class="card highlight">
+            <div class="label">최종 유효 낙차 (Head)</div>
+            <div id="head-val" class="val">0.00<span class="unit">m</span></div>
+        </div>
+
+        <div class="card">
+            <div class="label">쓰레기 유입 강도</div>
+            <div id="waste-val" class="val">0</div>
+        </div>
+        <div class="card" style="grid-column: span 2;">
+            <div class="label">누적 발전 손실액</div>
+            <div id="loss-val" class="val" style="color: #ffea00;">0<span class="unit">원</span></div>
+        </div>
+
+        <div id="status-banner" class="status-banner bg-normal">
+            시스템 정상 운전 중
+        </div>
+    </div>
+
+<script>
+    function update() {
+        fetch('/data')
+            .then(res => {
+                if (!res.ok) throw new Error('네트워크 응답 없음');
+                return res.json();
+            })
+            .then(data => {
+                // 데이터가 오는지 콘솔에 먼저 찍어봅니다 (디버깅용)
+                console.log("받은 데이터:", data);
+
+                // ID가 일치하는지 확인하며 화면 갱신
+                document.getElementById('sea-val').innerHTML = data.sea.toFixed(2) + '<span class="unit">m</span>';
+                document.getElementById('lake-val').innerHTML = data.lake.toFixed(2) + '<span class="unit">m</span>';
+                document.getElementById('head-val').innerHTML = data.head.toFixed(3) + '<span class="unit">m</span>';
+                document.getElementById('waste-val').innerText = data.waste;
+                document.getElementById('loss-val').innerHTML = data.loss_cum.toLocaleString() + '<span class="unit">원</span>';
+
+                // 상태 배너 업데이트
+                const banner = document.getElementById('status-banner');
+                if (data.waste > 700) {
+                    banner.innerText = "🚨 경고: 부유물 대량 유입 - 수거 권장";
+                    banner.className = "status-banner bg-warn";
+                } else {
+                    banner.innerText = "시스템 정상 운전 중";
+                    banner.className = "status-banner bg-normal";
+                }
+            })
+            .catch(error => {
+                console.error("자바스크립트 에러 발생:", error);
+            });
+    }
+
+    // 0.5초마다 업데이트 실행
+    setInterval(update, 500);
+</script>
+</body>
+</html>
