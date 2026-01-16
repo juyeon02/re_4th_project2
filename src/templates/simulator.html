@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block title %}실시간 시뮬레이터 - 시화조력{% endblock %}
+
+{% block style %}
+    .dashboard-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .card { background: var(--card-bg); padding: 25px; border-radius: 15px; border: 1px solid #333; text-align: center; }
+    .label { color: var(--text-gray); font-size: 0.9em; margin-bottom: 10px; }
+    .val { font-size: 2.2em; font-weight: bold; color: var(--primary-color); }
+    .unit { font-size: 0.5em; margin-left: 5px; color: #777; }
+    .status-banner { grid-column: span 3; padding: 20px; border-radius: 10px; font-weight: bold; margin-top: 10px; }
+    .bg-normal { background: #004d40; color: #00e676; }
+    .bg-warn { background: #b71c1c; color: #ff5252; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+{% endblock %}
+
+{% block content %}
+    <h1 style="margin-bottom: 30px;">실시간 발전 시뮬레이션</h1>
+    
+    <div class="dashboard-grid">
+        <div class="card"><div class="label">해수위</div><div id="sea-val" class="val">0.00<span class="unit">m</span></div></div>
+        <div class="card"><div class="label">호수위</div><div id="lake-val" class="val">0.00<span class="unit">m</span></div></div>
+        <div class="card" style="border-color: var(--primary-color);"><div class="label">유효 낙차</div><div id="head-val" class="val">0.00<span class="unit">m</span></div></div>
+        
+        <div class="card"><div class="label">발전 출력</div><div id="p-val" class="val" style="color:#ffff00;">0.00<span class="unit">MW</span></div></div>
+        <div class="card"><div class="label">쓰레기 유입 강도</div><div id="waste-val" class="val">0</div></div>
+        <div class="card"><div class="label">누적 손실액</div><div id="loss-val" class="val" style="color:#ff8a65;">0<span class="unit">원</span></div></div>
+
+        <div id="status-banner" class="status-banner bg-normal">시스템 정상 운전 중</div>
+    </div>
+
+    <script>
+        function update() {
+            fetch('/data').then(res => res.json()).then(d => {
+                document.getElementById('sea-val').innerHTML = d.sea.toFixed(2) + '<span class="unit">m</span>';
+                document.getElementById('lake-val').innerHTML = d.lake.toFixed(2) + '<span class="unit">m</span>';
+                document.getElementById('head-val').innerHTML = d.head.toFixed(2) + '<span class="unit">m</span>';
+                document.getElementById('p-val').innerHTML = d.actual_p.toFixed(2) + '<span class="unit">MW</span>';
+                document.getElementById('waste-val').innerText = d.waste;
+                document.getElementById('loss-val').innerHTML = d.loss_cum.toLocaleString() + '<span class="unit">원</span>';
+
+                const banner = document.getElementById('status-banner');
+                if(d.waste > 700) {
+                    banner.innerText = "🚨 경고: 부유물 대량 유입 - 발전 효율 저하";
+                    banner.className = "status-banner bg-warn";
+                } else {
+                    banner.innerText = "시스템 정상 운전 중";
+                    banner.className = "status-banner bg-normal";
+                }
+            });
+        }
+        setInterval(update, 500);
+    </script>
+{% endblock %}

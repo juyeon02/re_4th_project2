@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}기상 정보 - 시화조력 스마트 관제{% endblock %}
+
+{% block style %}
+    .weather-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+    .weather-card { background: #1e1e1e; padding: 30px; border-radius: 15px; border: 1px solid #333; }
+    .weather-card h2 { color: #00e5ff; margin-top: 0; }
+    .risk-indicator { 
+        padding: 20px; border-radius: 10px; text-align: center; font-size: 1.2em; font-weight: bold; margin-top: 20px;
+    }
+    .risk-low { background: #1b5e20; color: #81c784; border: 1px solid #81c784; }
+    .risk-high { background: #b71c1c; color: #ff8a80; border: 1px solid #ff8a80; animation: flash 1.5s infinite; }
+    @keyframes flash { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+{% endblock %}
+
+{% block content %}
+    <h1 style="margin-bottom: 30px;">지역별 기상 현황 및 유입 위험도</h1>
+
+    <div class="weather-layout">
+        <div class="weather-card">
+            <h2>실시간 기상 관측 (안산/시흥)</h2>
+            <div style="font-size: 0.9em; color: #888; margin-bottom: 20px;">관측 지점: 시화호 인근 AWS</div>
+            
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #333;">
+                <span>현재 기온</span><span style="font-weight: bold;">14.2°C</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #333;">
+                <span>누적 강수량 (24h)</span><span id="rain-val" style="font-weight: bold; color: #448aff;">45.5mm</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #333;">
+                <span>최대 풍속</span><span style="font-weight: bold;">3.8m/s</span>
+            </div>
+        </div>
+
+        <div class="weather-card">
+            <h2>쓰레기 유입 위험도 분석</h2>
+            <p style="color: #aaa; font-size: 0.9em;">강수량 데이터와 과거 유입 패턴을 분석한 결과입니다.</p>
+            
+            <div id="risk-box" class="risk-high">
+                ⚠️ 위험: 집중호우로 인한 유입 급증 예상
+            </div>
+            
+            <p style="margin-top: 20px; font-size: 0.9em; line-height: 1.6;">
+                현재 24시간 누적 강수량이 <strong>40mm를 초과</strong>함에 따라, 육상으로부터 부유물 유입 가능성이 매우 높습니다. 
+                <br><br>
+                <span style="color: #ffa726;">* 권장 조치: 시뮬레이터 탭에서 발전 효율 저하율 상시 모니터링 요망.</span>
+            </p>
+        </div>
+    </div>
+{% endblock %}

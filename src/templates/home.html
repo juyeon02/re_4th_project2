@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+
+{% block title %}시설 상세제원 - 시화조력발전소{% endblock %}
+
+{% block style %}
+    /* 1. 섹션 디자인 */
+    .section-card { 
+        background: #ffffff; 
+        padding: 45px; 
+        border-radius: 12px; 
+        border: 2px solid #e5e5e5; 
+        margin-bottom: 50px; 
+    }
+    
+    .section-header {
+        border-bottom: 3px solid #0056b3;
+        margin-bottom: 35px;
+        padding-bottom: 15px;
+    }
+    
+    .section-header h2 { 
+        margin: 0; color: #0056b3; font-size: 1.8em; font-weight: 800;
+    }
+
+    /* 2. [완벽 고정] 왼쪽 글씨 / 오른쪽 사진 */
+    .split-layout {
+        display: grid;
+        grid-template-columns: 1.3fr 1fr;
+        gap: 60px;
+        align-items: start;
+    }
+
+    .text-side { 
+        order: 1;                  /* 무조건 첫 번째(왼쪽) */
+        flex: 1.5; 
+    }
+
+    .image-side { 
+        order: 2;                  /* 무조건 두 번째(오른쪽) */
+        flex: 1; 
+        max-width: 450px;
+    }
+
+    .img-frame {
+        border: 2px solid #eee;
+        padding: 5px;
+        background: #fff;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+    
+    .img-frame img { width: 100%; display: block; border-radius: 4px; }
+    
+    .img-caption { 
+        text-align: center; font-size: 1em; color: #333; margin-top: 12px; font-weight: 600;
+    }
+
+    /* 3. 테이블 가독성 */
+    .detail-table {
+        border-collapse: separate;
+        border-spacing: 0 6px;
+        font-size: 1.05em;
+    }
+
+    .detail-table th {
+        background: #f1f6ff;
+        border-radius: 6px 0 0 6px;
+    }
+
+    .detail-table td {
+        background: #ffffff;
+        border-radius: 0 6px 6px 0;
+    }
+        
+    .detail-table th { 
+        color: #0056b3; text-align: left; padding: 15px; width: 35%; border-bottom: 2px solid #0056b3; font-weight: 800;
+    }
+    
+    .detail-table td { 
+        padding: 15px; border-bottom: 1px solid #ddd; color: #222; font-weight: 500;
+    }
+
+    .highlight-blue { color: #0056b3; font-weight: 800; }
+{% endblock %}
+
+{% block content %}
+    <div class="section-card" style="text-align: center; border: 3px solid #0056b3;">
+        <h2 style="color: #222; margin-bottom: 15px; font-weight: 800;">시화조력발전소 운영 개요</h2>
+        <p style="font-size: 1.4em; color: #0056b3; font-weight: 800; margin: 0;">
+            발전방식 : 단류식 창조발전 (Single Effect Flood Tide Generation)
+        </p>
+        <p style="color: #333; margin-top: 15px; font-size: 1.2em; font-weight: 600;">
+            " 밀물 때 낙차를 이용하여 시화호 내측으로 물을 유입하며 발전 (1일 2회 발전) "
+        </p>
+    </div>
+
+    <div class="section-card">
+        <div class="section-header">
+            <h2>01. 수차발전기 상세 제원</h2>
+        </div>
+        <div class="split-layout">
+            <div class="text-side">
+                <div class="desc-box">
+                    시화조력발전소의 수차발전기는 대용량 저낙차 해역에 적합한 
+                    <strong>횡축 벌브형 카플란 수차</strong>를 적용하여,
+                    밀물 시 발생하는 낙차를 효율적으로 발전에 활용합니다.
+                </div>
+
+                <table class="detail-table">
+                    <tr><th>발전 용량</th><td><span class="highlight-blue">25.4천 kW × 10기</span> (총 254 MW)</td></tr>
+                    <tr><th>수차 형식</th><td>횡축 벌브형 카플란 수차 (Bulb Kaplan)</td></tr>
+                    <tr><th>발전기 형식</th><td>횡축 3상 동기발전기 (극수 112극)</td></tr>
+                    <tr><th>수차 직경</th><td>φ 7.5m (날개수 3개)</td></tr>
+                    <tr><th>사용 수량</th><td><span class="highlight-blue">482.13 ㎥/sec</span> (기당)</td></tr>
+                    <tr><th>회전수</th><td>64.29 RPM</td></tr>
+                    <tr><th>낙차 정보</th><td>정격 5.82m (최대 7.50m)</td></tr>
+                </table>
+            </div>
+            <div class="image-side">
+                <div class="img-frame">
+                    <img src="{{ url_for('static', filename='수차.png') }}" alt="수차 구조도">
+                </div>
+                <div class="img-caption">▲ 횡축 벌브형 카플란 수차 구조도</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section-card">
+        <div class="section-header">
+            <h2>02. 수문 상세 제원</h2>
+        </div>
+        <div class="split-layout">
+            <div class="text-side">
+                <table class="detail-table">
+                    <tr><th>규격 및 기수</th><td>15.3m × 12m × <span class="highlight-blue">8문</span></td></tr>
+                    <tr><th>해수 유통량</th><td><span class="highlight-blue">1억 4천 7백만 ㎥/일</span></td></tr>
+                    <tr><th>수문 형식</th><td>롤러 게이트 (Roller Gate)</td></tr>
+                    <tr><th>권양기 용량</th><td>와이어로프 윈치식 (220톤)</td></tr>
+                    <tr><th>스톱로그</th><td>총 5조 (유지보수용)</td></tr>
+                </table>
+            </div>
+            <div class="image-side">
+                <div class="img-frame">
+                    <img src="{{ url_for('static', filename='수문.png') }}" alt="수문 전경">
+                </div>
+                <div class="img-caption">▲ 롤러 게이트 방식의 배수갑문</div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block footer %}
+    <div class="footer-left">
+        <h4 style="color: #495057; font-weight: 700; margin: 0 0 10px 0;">K-water 한국수자원공사 시화조력관리단</h4>
+        <div style="margin: 5px 0;">본 데이터는 K-water 공식 홈페이지 제원 및 운영현황 자료를 기반으로 재구성되었습니다.</div>
+        <div style="margin: 5px 0;">
+            데이터 출처 : <a href="https://www.kwater.or.kr/website/tlight/sub01_06_01.do" target="_blank" class="source-link">K-water 시화조력관리단 공식 웹사이트 바로가기 ↗</a>
+        </div>
+    </div>
+
+    <div class="footer-right" style="text-align: right;">
+        <div style="font-weight: 600; margin-bottom: 5px; color: #495057;">2026 재생에너지 데이터 분석 프로젝트</div>
+        <div class="presenter-name">발표자 : 서주연</div>
+    </div>
+{% endblock %}

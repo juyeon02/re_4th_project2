@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>시화조력발전소 운영현황</title>
+    <style>
+        body { 
+            background-color: #ffffff; 
+            color: #222222;            
+            font-family: 'Pretendard', 'Malgun Gothic', sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+
+
+        /* 상단바 */
+        nav {
+            background: #ffffff;
+            padding: 15px 40px; 
+            display: flex; 
+            gap: 25px; 
+            border-bottom: 3px solid #0056b3;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .nav-logo { color: #0056b3; font-weight: 800; margin-right: auto; font-size: 1.5em; }
+        nav a { color: #444; text-decoration: none; font-weight: 700; padding: 8px 12px; }
+        nav a:hover { color: #0056b3; background: #f0f7ff; border-radius: 5px; }
+
+        /* 메인 컨테이너 */
+        .container { 
+            max-width: 1200px; 
+            margin: 40px auto; 
+            padding: 0 30px; 
+            flex: 1; 
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* 푸터 기본 스타일 (내용은 없지만 배경색과 레이아웃은 공통 적용) */
+        footer {
+            background-color: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+            padding: 40px 0; /* 좌우 패딩은 내부 footer-content에서 조절 */
+            margin-top: auto;
+            color: #868e96;
+            font-size: 0.85em;
+        }
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .desc-box {
+            background: #f5f9ff;
+            border-left: 5px solid #0056b3;
+            padding: 18px 22px;
+            margin-bottom: 25px;
+            font-size: 1.05em;
+            line-height: 1.7;
+            color: #333;
+            font-weight: 500;
+        }
+
+        {% block style %}{% endblock %}
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-logo">시화조력발전소 운영현황</div>
+        <a href="/">시설 상세제원</a>
+        <a href="/weather">실시간 기상정보</a>
+        <a href="/simulator">발전 시뮬레이션</a>
+        <a href="/history">과거 데이터분석</a>
+    </nav>
+
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+
+    <footer>
+        <div class="footer-content">
+            {% block footer %}{% endblock %}
+        </div>
+    </footer>
+</body>
+</html>
