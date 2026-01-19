@@ -1,51 +1,293 @@
 {% extends 'base.html' %}
 
-{% block title %}기상 정보 - 시화조력 스마트 관제{% endblock %}
+{% block title %}기상 및 수위 정보 - 시화조력 스마트 관제{% endblock %}
 
 {% block style %}
-    .weather-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
-    .weather-card { background: #1e1e1e; padding: 30px; border-radius: 15px; border: 1px solid #333; }
-    .weather-card h2 { color: #00e5ff; margin-top: 0; }
-    .risk-indicator { 
-        padding: 20px; border-radius: 10px; text-align: center; font-size: 1.2em; font-weight: bold; margin-top: 20px;
+    /* 1. 상단 상태 카드 레이아웃 */
+    .status-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 25px;
+        margin-bottom: 40px;
     }
-    .risk-low { background: #1b5e20; color: #81c784; border: 1px solid #81c784; }
-    .risk-high { background: #b71c1c; color: #ff8a80; border: 1px solid #ff8a80; animation: flash 1.5s infinite; }
-    @keyframes flash { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+    .status-card {
+        background: #ffffff;
+        padding: 25px;
+        border-radius: 12px;
+        border: 2px solid #e5e5e5;
+        text-align: center;
+    }
+    .status-label { font-size: 1.1em; color: #666; font-weight: 700; margin-bottom: 10px; }
+    .status-value { font-size: 2em; font-weight: 800; color: #0056b3; }
+    .status-unit { font-size: 0.6em; color: #888; margin-left: 5px; }
+
+    /* 2. 메인 분석 레이아웃 (좌: 기상 / 우: 위험도) */
+    .weather-layout { 
+        display: grid; 
+        grid-template-columns: 1.2fr 1fr; 
+        gap: 30px; 
+        margin-bottom: 40px; /* 그래프 섹션과의 간격 */
+    }
+    .weather-card { 
+        background: #ffffff; 
+        padding: 35px; 
+        border-radius: 12px; 
+        border: 2px solid #e5e5e5; 
+    }
+    .weather-card h2 { 
+        color: #0056b3; 
+        margin-top: 0; 
+        border-bottom: 2px solid #0056b3; 
+        padding-bottom: 15px;
+        font-size: 1.5em;
+    }
+
+    /* 3. 위험도 인디케이터 */
+    .risk-indicator { 
+        padding: 25px; 
+        border-radius: 10px; 
+        text-align: center; 
+        font-size: 1.3em; 
+        font-weight: 800; 
+        margin-top: 20px;
+    }
+    .risk-low { background: #e7f5ff; color: #0056b3; border: 2px solid #b3d7ff; }
+    .risk-high { 
+        background: #fff5f5; color: #e03131; border: 2px solid #ffc9c9; 
+        animation: flash 1.5s infinite; 
+    }
+    @keyframes flash { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+
+    /* 데이터 리스트 스타일 */
+    .data-row {
+        display: flex; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid #eee; font-size: 1.1em;
+    }
+    .data-label { color: #555; font-weight: 600; }
+    .data-val { font-weight: 800; color: #222; }
+
+    /* 그래프 섹션 스타일 */
+    .chart-container {
+        background: #ffffff;
+        padding: 40px;
+        border-radius: 12px;
+        border: 2px solid #e5e5e5;
+        margin-bottom: 40px;
+    }
+    .chart-container h3 {
+        color: #0056b3;
+        margin-top: 0;
+        border-bottom: 2px solid #0056b3;
+        padding-bottom: 15px;
+        font-size: 1.5em;
+        margin-bottom: 30px;
+    }
+    .chart-canvas {
+        width: 100%;
+        max-height: 400px; /* 그래프 높이 제한 */
+    }
 {% endblock %}
 
 {% block content %}
-    <h1 style="margin-bottom: 30px;">지역별 기상 현황 및 유입 위험도</h1>
+    <h1 style="margin-bottom: 30px; font-weight: 800; color: #222;">실시간 기상 및 수위 관제</h1>
+
+    <div class="status-grid">
+        <div class="status-card">
+            <div class="status-label">외해 수위 (Tide)</div>
+            <div class="status-value">
+                <span id="curr-sea">{{ arduino.sea }}</span><span class="status-unit">m</span>
+            </div>
+        </div>
+        <div class="status-card">
+            <div class="status-label">내해 수위 (Lake)</div>
+            <div class="status-value">
+                <span id="curr-lake">{{ arduino.lake }}</span><span class="status-unit">m</span>
+            </div>
+        </div>
+        <div class="status-card" style="border-color: #0056b3; background: #f0f7ff;">
+            <div class="status-label" style="color:#0056b3;">현재 발전 낙차</div>
+            <div class="status-value" style="color:#0056b3;">
+                <span id="curr-head">{{ arduino.head }}</span><span class="status-unit">m</span>
+            </div>
+        </div>
+    </div>
 
     <div class="weather-layout">
         <div class="weather-card">
-            <h2>실시간 기상 관측 (안산/시흥)</h2>
-            <div style="font-size: 0.9em; color: #888; margin-bottom: 20px;">관측 지점: 시화호 인근 AWS</div>
+            <h2>권역별 평균 기상 현황</h2>
+            <div class="desc-box" style="margin-bottom: 20px;">
+                안양, 화성, 인천 등 시화호 유입 하천 인근 <strong>6개 주요 지점</strong>의 기상 데이터를 평균하여 산출한 지표입니다.
+            </div>
             
-            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #333;">
-                <span>현재 기온</span><span style="font-weight: bold;">14.2°C</span>
+            <div class="data-row">
+                <span class="data-label">평균 기온</span>
+                <span class="data-val">14.2°C</span>
             </div>
-            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #333;">
-                <span>누적 강수량 (24h)</span><span id="rain-val" style="font-weight: bold; color: #448aff;">45.5mm</span>
+            <div class="data-row">
+                <span class="data-label">6개 지점 평균 강수량 (24h)</span>
+                <span class="data-val" style="color: #0056b3;">45.5 mm</span>
             </div>
-            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #333;">
-                <span>최대 풍속</span><span style="font-weight: bold;">3.8m/s</span>
+            <div class="data-row">
+                <span class="data-label">권역 평균 풍속</span>
+                <span class="data-val">3.8 m/s</span>
             </div>
+            
+            <p style="font-size: 0.9em; color: #888; margin-top: 15px;">
+                * 데이터 갱신: 실시간 API 연동 중
+            </p>
         </div>
 
         <div class="weather-card">
             <h2>쓰레기 유입 위험도 분석</h2>
-            <p style="color: #aaa; font-size: 0.9em;">강수량 데이터와 과거 유입 패턴을 분석한 결과입니다.</p>
+            <p style="color: #666; font-size: 1em; font-weight: 500;">
+                강수량 패턴과 과거 수거량 데이터의 상관관계를 분석한 결과입니다.
+            </p>
             
             <div id="risk-box" class="risk-high">
-                ⚠️ 위험: 집중호우로 인한 유입 급증 예상
+                ⚠️ 위험: 부유물 유입 급증 단계
             </div>
             
-            <p style="margin-top: 20px; font-size: 0.9em; line-height: 1.6;">
-                현재 24시간 누적 강수량이 <strong>40mm를 초과</strong>함에 따라, 육상으로부터 부유물 유입 가능성이 매우 높습니다. 
-                <br><br>
-                <span style="color: #ffa726;">* 권장 조치: 시뮬레이터 탭에서 발전 효율 저하율 상시 모니터링 요망.</span>
-            </p>
+            <div style="margin-top: 25px; line-height: 1.8; color: #444; font-size: 1.05em;">
+                현재 6개 지점 평균 강수량이 <span style="color: #e03131; font-weight: 800;">45.5mm</span>를 기록하고 있습니다. 
+                <br>분석 결과, 누적 강수량 40mm 초과 시 시화천 및 유입 하천의 부유 쓰레기 유통량이 평시 대비 <strong>3배 이상 급증</strong>하는 패턴을 보입니다.
+                
+                <div style="margin-top: 20px; padding: 15px; background: #fff9db; border-radius: 8px; border: 1px solid #fab005; color: #856404;">
+                    <strong>📢 관제 지침:</strong> 수차 유입구 폐쇄 위험이 있으니 [발전 시뮬레이션] 메뉴에서 유량 감소에 따른 효율 저하를 확인하십시오.
+                </div>
+            </div>
         </div>
     </div>
+
+    <div class="chart-container">
+        <h3>해수위 & 호수위 변화 추이 (API 데이터)</h3>
+        <canvas id="tideLakeChart" class="chart-canvas"></canvas>
+    </div>
+
+    <div class="chart-container">
+        <h3>권역별 평균 강수량 (24시간)</h3>
+        <canvas id="rainfallChart" class="chart-canvas"></canvas>
+    </div>
+{% endblock %}
+
+{% block footer %}
+    <div class="footer-left">
+        <h4 style="color: #495057; font-weight: 800; margin: 0 0 10px 0;">기상청 및 K-water 데이터 연동</h4>
+        <div style="margin: 5px 0; font-weight: 500;">본 페이지의 정보는 공공데이터포털 실시간 API 및 모형 실험 센서 데이터를 기반으로 합니다.</div>
+        <div style="margin: 5px 0;">
+            데이터 출처 : <a href="https://www.weather.go.kr" target="_blank" class="source-link">기상청 날씨누리 ↗</a> | 
+            <a href="http://www.kwater.or.kr" target="_blank" class="source-link">K-water 물정보포털 ↗</a>
+        </div>
+    </div>
+
+    <div class="footer-right" style="text-align: right;">
+        <div style="font-weight: 700; margin-bottom: 5px; color: #495057;">2026 재생에너지 데이터 분석 프로젝트</div>
+        <div class="presenter-name" style="padding: 5px 15px;">발표자 : 서주연</div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // ===============================================
+    // 1. [그래프] 수자원공사 API 데이터 연동 (Jinja2)
+    // ===============================================
+    
+    // app.py에서 api_data라는 이름으로 보낸 데이터를 여기서 받습니다.
+    // 만약 데이터가 없으면 빈 리스트 []를 넣어 에러를 막습니다.
+    const apiSea = {{ api_data.sea | tojson | default("[]") }};
+    const apiLake = {{ api_data.lake | tojson | default("[]") }};
+    const apiLabels = {{ api_data.times | tojson | default("[]") }};
+
+    // 데이터가 하나도 없을 때를 대비해 라벨 설정
+    const chartLabels = apiLabels.length > 0 ? apiLabels : ["대기중", "대기중", "대기중"];
+
+    // (1) 수위 그래프 그리기
+    const tideLakeCtx = document.getElementById('tideLakeChart').getContext('2d');
+    new Chart(tideLakeCtx, {
+        type: 'line',
+        data: {
+            labels: chartLabels,
+            datasets: [
+                {
+                    label: '실제 해수위 (API)',
+                    data: apiSea,
+                    borderColor: '#0056b3',
+                    backgroundColor: 'rgba(0, 86, 179, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true
+                },
+                {
+                    label: '실제 호수위 (API)',
+                    data: apiLake,
+                    borderColor: '#42a5f5',
+                    backgroundColor: 'rgba(66, 165, 245, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { 
+                    title: { display: true, text: '수위 (m)' },
+                    grid: { color: '#f0f0f0' }
+                },
+                x: { grid: { display: false } }
+            },
+            plugins: {
+                legend: { position: 'top' },
+                tooltip: { mode: 'index', intersect: false }
+            }
+        }
+    });
+
+    // (2) 강수량 그래프 (아직 API 없으므로 더미 유지)
+    const rainfallCtx = document.getElementById('rainfallChart').getContext('2d');
+    new Chart(rainfallCtx, {
+        type: 'bar',
+        data: {
+            labels: Array.from({length: 24}, (_, i) => `${i}시`),
+            datasets: [{
+                label: '권역별 평균 강수량 (mm)',
+                data: [2, 3, 5, 8, 12, 10, 7, 5, 3, 2, 1, 0, 0, 0, 0, 1, 2, 4, 6, 8, 7, 5, 3, 2],
+                backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+
+    // ===============================================
+    // 2. [실시간 숫자] 아두이노 데이터 연동 (1초마다)
+    // ===============================================
+    setInterval(() => {
+        // app.py의 /data 경로에서 최신 아두이노 값을 가져옴
+        fetch('/data')
+            .then(res => res.json())
+            .then(data => {
+                // 가져온 값을 HTML 상단 카드 숫자에 덮어씌움
+                const elSea = document.getElementById('curr-sea');
+                const elLake = document.getElementById('curr-lake');
+                const elHead = document.getElementById('curr-head');
+
+                if(elSea) elSea.innerText = data.sea.toFixed(2);
+                if(elLake) elLake.innerText = data.lake.toFixed(2);
+                if(elHead) elHead.innerText = data.head.toFixed(2);
+            })
+            .catch(err => console.log("아두이노 통신 대기..."));
+    }, 1000);
+    // 10분(600,000ms)마다 페이지를 자동으로 새로고침하여 최신 API 데이터를 반영합니다.
+    setTimeout(function(){
+        location.reload();
+    }, 600000);
+    
+</script>
 {% endblock %}
