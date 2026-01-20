@@ -89,7 +89,7 @@
 
 {% block content %}
     <h1 style="margin-bottom: 30px; font-weight: 800; color: #222;">실시간 기상 및 수위 관제</h1>
-
+    
     <div class="status-grid">
         <div class="status-card">
             <div class="status-label">외해 수위 (Tide)</div>
@@ -159,6 +159,21 @@
 
     <div class="chart-container">
         <h3>해수위 & 호수위 변화 추이 (API 데이터)</h3>
+        <div style="display:flex; align-items:center; gap:15px; margin-bottom:20px;">
+            <label style="font-weight:700; color:#444;">날짜 선택</label>
+            <input type="date" id="targetDate" />
+
+            <span id="liveBadge"
+                style="padding:5px 12px;
+                        background:#e7f5ff;
+                        color:#0056b3;
+                        font-weight:700;
+                        border-radius:20px;
+                        font-size:0.9em;">
+                ● 실시간
+            </span>
+        </div>
+
         <canvas id="tideLakeChart" class="chart-canvas"></canvas>
     </div>
 
@@ -187,107 +202,81 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // ===============================================
-    // 1. [그래프] 수자원공사 API 데이터 연동 (Jinja2)
-    // ===============================================
+    let tideChart; 
+    const dateInput = document.getElementById('targetDate');
+    const liveBadge = document.getElementById('liveBadge');
     
-    // app.py에서 api_data라는 이름으로 보낸 데이터를 여기서 받습니다.
-    // 만약 데이터가 없으면 빈 리스트 []를 넣어 에러를 막습니다.
-    const apiSea = {{ api_data.sea | tojson | default("[]") }};
-    const apiLake = {{ api_data.lake | tojson | default("[]") }};
-    const apiLabels = {{ api_data.times | tojson | default("[]") }};
+    // 1. 오늘 날짜 자동 설정
+    const today = new Date().toLocaleDateString('sv-SE'); 
+    dateInput.value = today;
 
-    // 데이터가 하나도 없을 때를 대비해 라벨 설정
-    const chartLabels = apiLabels.length > 0 ? apiLabels : ["대기중", "대기중", "대기중"];
+    // 2. 데이터 불러오기 함수 (기존 Jinja2 변수 대신 fetch 사용)
+    function loadData(selectedDate) {
+        const url = (selectedDate === today) ? '/api/realtime' : `/api/history/${selectedDate}`;
+        
+        fetch(url).then(res => res.json()).then(data => {
+            if(data.error) { alert("데이터가 없습니다."); return; }
+            drawChart(data);
+        });
+    }
 
-    // (1) 수위 그래프 그리기
-    const tideLakeCtx = document.getElementById('tideLakeChart').getContext('2d');
-    new Chart(tideLakeCtx, {
-        type: 'line',
-        data: {
-            labels: chartLabels,
-            datasets: [
-                {
-                    label: '실제 해수위 (API)',
-                    data: apiSea,
-                    borderColor: '#0056b3',
-                    backgroundColor: 'rgba(0, 86, 179, 0.1)',
-                    borderWidth: 2,
-                    tension: 0.4,
-                    fill: true
-                },
-                {
-                    label: '실제 호수위 (API)',
-                    data: apiLake,
-                    borderColor: '#42a5f5',
-                    backgroundColor: 'rgba(66, 165, 245, 0.1)',
-                    borderWidth: 2,
-                    tension: 0.4,
-                    fill: true
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: { 
-                    title: { display: true, text: '수위 (m)' },
-                    grid: { color: '#f0f0f0' }
-                },
-                x: { grid: { display: false } }
+    // 3. 그래프 그리기 (30분 단위 눈금 설정 포함)
+    function drawChart(data) {
+        const ctx = document.getElementById('tideLakeChart').getContext('2d');
+        if (tideChart) tideChart.destroy(); // 기존 그래프 지우기
+
+        tideChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.times,
+                datasets: [
+                    { label: '외해수위', data: data.sea, borderColor: '#0056b3', fill: false, pointRadius: 0 },
+                    { label: '내해수위', data: data.lake, borderColor: '#42a5f5', fill: false, pointRadius: 0 }
+                ]
             },
-            plugins: {
-                legend: { position: 'top' },
-                tooltip: { mode: 'index', intersect: false }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        ticks: {
+                            // 30분 단위로만 글자 표시
+                            callback: function(val, index) {
+                                const time = this.getLabelForValue(val);
+                                return (time.includes(':00') || time.includes(':30')) ? time : '';
+                            },
+                            autoSkip: false
+                        }
+                    }
+                }
             }
+        });
+    }
+
+    // 4. 날짜 변경 시 작동
+    dateInput.addEventListener('change', function(e) {
+        if (e.target.value === today) {
+            location.reload(); 
+        } else {
+            liveBadge.style.display = 'none';
+            loadData(e.target.value);
         }
     });
 
-    // (2) 강수량 그래프 (아직 API 없으므로 더미 유지)
-    const rainfallCtx = document.getElementById('rainfallChart').getContext('2d');
-    new Chart(rainfallCtx, {
-        type: 'bar',
-        data: {
-            labels: Array.from({length: 24}, (_, i) => `${i}시`),
-            datasets: [{
-                label: '권역별 평균 강수량 (mm)',
-                data: [2, 3, 5, 8, 12, 10, 7, 5, 3, 2, 1, 0, 0, 0, 0, 1, 2, 4, 6, 8, 7, 5, 3, 2],
-                backgroundColor: 'rgba(75, 192, 192, 0.6)',
-                borderColor: 'rgba(75, 192, 192, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: { y: { beginAtZero: true } }
-        }
-    });
-
-    // ===============================================
-    // 2. [실시간 숫자] 아두이노 데이터 연동 (1초마다)
-    // ===============================================
+    // 5. 아두이노 숫자 실시간 업데이트 (1초마다)
     setInterval(() => {
-        // app.py의 /data 경로에서 최신 아두이노 값을 가져옴
-        fetch('/data')
-            .then(res => res.json())
-            .then(data => {
-                // 가져온 값을 HTML 상단 카드 숫자에 덮어씌움
-                const elSea = document.getElementById('curr-sea');
-                const elLake = document.getElementById('curr-lake');
-                const elHead = document.getElementById('curr-head');
-
-                if(elSea) elSea.innerText = data.sea.toFixed(2);
-                if(elLake) elLake.innerText = data.lake.toFixed(2);
-                if(elHead) elHead.innerText = data.head.toFixed(2);
-            })
-            .catch(err => console.log("아두이노 통신 대기..."));
+        if (dateInput.value !== today) return; 
+        fetch('/data').then(res => res.json()).then(data => {
+            document.getElementById('curr-sea').innerText = data.sea.toFixed(2);
+            document.getElementById('curr-lake').innerText = data.lake.toFixed(2);
+            document.getElementById('curr-head').innerText = data.head.toFixed(2);
+        });
     }, 1000);
-    // 10분(600,000ms)마다 페이지를 자동으로 새로고침하여 최신 API 데이터를 반영합니다.
-    setTimeout(function(){
-        location.reload();
-    }, 600000);
-    
+
+    // 6. 30분 자동 새로고침 (API 트래픽 보호)
+    setTimeout(() => { if (dateInput.value === today) location.reload(); }, 1800000);
+
+    // 초기 실행
+    loadData(today);
 </script>
 {% endblock %}
